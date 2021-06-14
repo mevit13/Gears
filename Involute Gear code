@@ -1,0 +1,72 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+#Functions to rotate a given matrix
+def rotate(o):
+    return [[np.cos(o), -np.sin(o)], [np.sin(o), np.cos(o)]]
+#Function to construct an arc
+def curve(r, init, final): 
+    cur = np.array([[], []])
+    for j in np.arange(init, final, 0.001):
+        cur = np.append(cur, [[r * np.cos(j)], [r * np.sin(j)]], axis=1)
+    return cur
+#Function to draw a radial line
+def line_r(o, init, final): 
+    return [[init * np.cos(o), final * np.cos(o)], [init * np.sin(o), final * np.sin(o)]]
+
+# Main block
+
+#numpy arrays to store co-ordinates
+gear = np.array([[], []])
+# the specified parameters of the gear
+profile = np.array([[], []])
+pressure_angle = np.pi*20 / 180
+z = 20 #number of teeth
+module = 10
+rpitch = module * z / 2
+rdedendum = rpitch - module*1.25
+radendum = rpitch + module
+rbase = rpitch * np.cos(pressure_angle)
+u = 17.63 / rbase  
+tooth_half = np.array([[], []])
+tooth_half_2 = np.array([[], []])
+
+
+#constructing one half of involute curve using cartesian equation
+o = 0
+while True:  
+    x = rbase * (np.cos(o) + o * np.sin(o))
+    y = rbase * (np.sin(o) - o * np.cos(o))
+    if (rdedendum*rdedendum <= x*x + y*y <= radendum*radendum):
+        tooth_half = np.append(tooth_half, [[x], [y]], axis=1)
+    elif (x*x + y*y > radendum*radendum):
+        q = np.arctan(y/x)
+        break
+    o += 0.001
+# mirroring the half 
+tooth_half_2 = np.flip(np.dot(rotate(u), [tooth_half[0], tooth_half[1] * -1]), 1)    
+
+
+#using the involute curve to create the tooth profile
+if (rdedendum < rbase):
+    profile = line_r(0, rdedendum, rbase)  
+
+profile = np.concatenate((profile, tooth_half, curve(radendum, q, u - q), tooth_half_2), axis=1)  # Tooth
+
+if (rdedendum < rbase):
+    profile = np.concatenate((profile,line_r(u, rdedendum, rbase)),
+                                  axis=1)  
+
+profile = np.concatenate((profile, curve(rdedendum, u, 2 * np.pi / 20)), axis=1)  
+
+
+# using the tooth profile in a loop to create the whole gear
+i=0
+while (i<z):
+    t = i* 2*np.pi/z
+    gear= np.concatenate((gear, np.dot(rotate(t), profile)), axis=1)
+    i+=1
+
+#plotting the gear profile
+plt.plot(gear[0], gear[1])
+plt.show()
